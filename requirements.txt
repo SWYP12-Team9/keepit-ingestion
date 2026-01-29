@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+trafilatura
+yt_dlp
+beautifulsoup4
+requests
+lxml
+Pillow
+pytubefix
+youtube-transcript-api
+apify-client
+python-dotenv

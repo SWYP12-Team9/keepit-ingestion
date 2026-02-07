@@ -1,0 +1,14 @@
+venv
+.git
+.github
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.db
+.env
+Dockerfile
+docker-compose.yml
+.ipynb_checkpoints
+.vscode
+.idea

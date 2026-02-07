@@ -6,14 +6,26 @@ URL 메타데이터 스크래퍼 메인 모듈
 """
 
 from typing import Dict, Any
-from . import (
-    scrape_youtube,
-    scrape_instagram,
-    scrape_web,
+from .web import scrape_web
+from .youtube import scrape_youtube
+from .instagram import scrape_instagram
+from .google import scrape_google_search
+from .coupang import scrape_coupang
+from app.scrapers.utils.scrape_utils import (
+    detect_site_type,
+    validate_url_safety,
+    generate_basic_metadata,
     normalize_url,
     is_youtube_url,
-    is_instagram_url
+    is_instagram_url,
+    is_naver_blog_url,
+    is_velog_url,
+    is_tistory_url,
+    is_google_search_url,
+    is_coupang_url
 )
+import asyncio
+from app.scrapers.utils.headers import get_browser_headers
 
 
 def scrape_url(url: str, include_content: bool = True, max_length: int = 1000) -> Dict[str, Any]:
@@ -40,8 +52,8 @@ def scrape_url(url: str, include_content: bool = True, max_length: int = 1000) -
             "success": bool,
             "title": str,
             "description": str,
-            "thumnail_image_url": str,
-            "favicon_image_url": str,
+            "thumbnail_url": str,
+            "favicon_url": str,
             "site_name": str,
             "url": str,
             "content": str (YouTube만, include_content=True인 경우),
@@ -62,6 +74,10 @@ def scrape_url(url: str, include_content: bool = True, max_length: int = 1000) -
             "success": False,
             "error": "URL is required"
         }
+        
+    # SSRF 방지: 로컬/사설 IP 차단 -> 차단 시 Fallback 메타데이터 반환
+    if not validate_url_safety(url):
+        return generate_basic_metadata(url)
 
     # URL 정규화
     url = normalize_url(url)
@@ -71,9 +87,8 @@ def scrape_url(url: str, include_content: bool = True, max_length: int = 1000) -
     final_url = url
     try:
         import requests
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
+        # 실제 브라우저와 유사한 헤더 생성
+        headers = get_browser_headers()
         # HEAD 요청으로 가볍게 최종 URL만 확인 (타임아웃 짧게)
         response = requests.head(url, headers=headers, timeout=5, allow_redirects=True)
         final_url = response.url
@@ -88,6 +103,14 @@ def scrape_url(url: str, include_content: bool = True, max_length: int = 1000) -
     # Instagram URL 처리 (최종 URL 기준)
     if is_instagram_url(final_url):
         return scrape_instagram(final_url, max_length=max_length)
+
+    # Google Search URL 처리 (최종 URL 기준)
+    if is_google_search_url(final_url):
+        return scrape_google_search(final_url)
+
+    # Coupang URL 처리 (최종 URL 기준)
+    if is_coupang_url(final_url):
+        return scrape_coupang(final_url)
 
     # 일반 웹사이트 처리 (최종 URL 사용)
     return scrape_web(final_url, include_content=True, max_length=max_length)

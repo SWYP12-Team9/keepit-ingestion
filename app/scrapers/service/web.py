@@ -5,11 +5,16 @@ Open Graph, Twitter Card 등의 메타 태그를 추출하고
 본문 내용을 파싱하는 함수들을 제공합니다.
 """
 
+import logging
 import trafilatura
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from typing import Dict, Any
+from app.scrapers.utils.headers import get_browser_headers
+from app.scrapers.utils.scrape_utils import generate_basic_metadata
+
+logger = logging.getLogger(__name__)
 
 
 def extract_favicon(soup: BeautifulSoup, url: str) -> str:
@@ -89,7 +94,7 @@ def extract_meta_tags(soup: BeautifulSoup, url: str) -> Dict[str, Any]:
     metadata = {
         "title": None,
         "description": None,
-        "thumnail_image_url": None,
+        "thumbnail_url": None,
         "icon": None,
         "site_name": None,
         "url": url,
@@ -127,13 +132,13 @@ def extract_meta_tags(soup: BeautifulSoup, url: str) -> Dict[str, Any]:
 
     # Image 우선순위: og:image > twitter:image (썸네일/대표 이미지)
     if og_image and og_image.get("content"):
-        metadata["thumnail_image_url"] = og_image["content"]
+        metadata["thumbnail_url"] = og_image["content"]
     elif twitter_image and twitter_image.get("content"):
-        metadata["thumnail_image_url"] = twitter_image["content"]
+        metadata["thumbnail_url"] = twitter_image["content"]
 
     # 상대 경로를 절대 경로로 변환 (image)
-    if metadata["thumnail_image_url"] and not metadata["thumnail_image_url"].startswith("http"):
-        metadata["thumnail_image_url"] = urljoin(url, metadata["thumnail_image_url"])
+    if metadata["thumbnail_url"] and not metadata["thumbnail_url"].startswith("http"):
+        metadata["thumbnail_url"] = urljoin(url, metadata["thumbnail_url"])
 
     # Favicon/Icon 추출 (별도 필드)
     metadata["icon"] = extract_favicon(soup, url)
@@ -184,9 +189,8 @@ def scrape_web(url: str, include_content: bool = True, max_length: int = 1000) -
         }
     """
     try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
+        # 실제 브라우저와 유사한 헤더 생성
+        headers = get_browser_headers()
 
         # 리다이렉트를 명시적으로 허용
         response = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
@@ -204,8 +208,8 @@ def scrape_web(url: str, include_content: bool = True, max_length: int = 1000) -
             "success": True,
             "title": metadata["title"],
             "description": metadata["description"],
-            "thumnail_image_url": metadata["thumnail_image_url"],
-            "favicon_image_url": metadata["icon"],
+            "thumbnail_url": metadata["thumbnail_url"],
+            "favicon_url": metadata["icon"],
             "site_name": metadata["site_name"],
             "url": final_url,  # 리다이렉트 후 최종 URL
         }
@@ -219,14 +223,10 @@ def scrape_web(url: str, include_content: bool = True, max_length: int = 1000) -
         return result
 
     except requests.exceptions.RequestException as e:
-        return {
-            "success": False,
-            "error": f"Failed to fetch URL: {str(e)}",
-            "url": url
-        }
+        # 차단(403)이나 연결 실패 시 기본 메타데이터 사용
+        logger.warning(f"Generic web scraping failed: {str(e)}. Using basic metadata.")
+        return generate_basic_metadata(url)
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Failed to parse content: {str(e)}",
-            "url": url
-        }
+        # 파싱 실패 등 기타 오류 시에도 기본 메타데이터 사용
+        logger.error(f"Generic web parsing failed: {str(e)}. Using basic metadata.")
+        return generate_basic_metadata(url)

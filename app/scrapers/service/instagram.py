@@ -1,6 +1,10 @@
 import os
+import logging
 from typing import Dict, Any
 from apify_client import ApifyClient
+from app.scrapers.utils.scrape_utils import generate_basic_metadata
+
+logger = logging.getLogger(__name__)
 
 def scrape_instagram(url: str, max_length: int = 200) -> Dict[str, Any]:
     """
@@ -17,8 +21,8 @@ def scrape_instagram(url: str, max_length: int = 200) -> Dict[str, Any]:
             "success": bool,
             "title": str,
             "description": str,
-            "thumnail_image_url": str,
-            "favicon_image_url": str,
+            "thumbnail_url": str,
+            "favicon_url": str,
             "site_name": str,
             "url": str,
             "content": str (본문 + 댓글),
@@ -26,11 +30,8 @@ def scrape_instagram(url: str, max_length: int = 200) -> Dict[str, Any]:
     """
     api_token = os.environ.get("APIFY_API_KEY")
     if not api_token:
-        return {
-            "success": False,
-            "error": "APIFY_API_KEY environment variable is not set",
-            "url": url
-        }
+        logger.warning("APIFY_API_KEY environment variable is not set. Using basic metadata.")
+        return generate_basic_metadata(url)
 
     try:
         # Apify Client 초기화
@@ -54,11 +55,8 @@ def scrape_instagram(url: str, max_length: int = 200) -> Dict[str, Any]:
         items = dataset.list_items().items
 
         if not items:
-            return {
-                "success": False,
-                "error": "No data returned from Apify",
-                "url": url
-            }
+            # 데이터가 없는 경우 (비공개 계정 등) 기본 메타데이터 사용
+            return generate_basic_metadata(url)
 
         post = items[0]
         
@@ -101,16 +99,14 @@ def scrape_instagram(url: str, max_length: int = 200) -> Dict[str, Any]:
             "success": True,
             "title": title,
             "description": description,
-            "thumnail_image_url": image_url,
-            "favicon_image_url": icon_url,
+            "thumbnail_url": image_url,
+            "favicon_url": icon_url,
             "site_name": "Instagram",
             "url": post.get("url", url),
             "content": full_content
         }
 
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Apify scraping failed: {str(e)}",
-            "url": url
-        }
+        # Apify 실패 시 fallback 사용
+        logger.error(f"Apify detailed scraping failed: {str(e)}. Using basic metadata.")
+        return generate_basic_metadata(url)

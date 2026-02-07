@@ -12,7 +12,7 @@ class URLRequest(BaseModel):
                 "max_length": 1000
             }
         }
-
+    
 class URLListRequest(BaseModel):
     urls: List[str] = Field(..., description="스크래핑할 URL 리스트", max_items=10)
     max_length: Optional[int] = Field(1000, description="본문 미리보기 최대 길이 (기본값: 1000)")

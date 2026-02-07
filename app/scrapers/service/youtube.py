@@ -4,13 +4,20 @@ YouTube 스크래퍼 모듈
 YouTube 영상의 메타데이터와 자막을 추출하는 함수들을 제공합니다.
 """
 
+import logging
 import re
 import yt_dlp
 from typing import Optional, Dict, Any
 from pytubefix import YouTube
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
+from app.scrapers.utils.scrape_utils import generate_basic_metadata
+import requests
+from bs4 import BeautifulSoup
+from app.scrapers.service.web import extract_favicon, extract_meta_tags
+from app.scrapers.utils.headers import get_browser_headers
 
+logger = logging.getLogger(__name__)
 
 def extract_video_id(url: str) -> Optional[str]:
     """
@@ -164,19 +171,11 @@ def scrape_youtube(url: str, include_content: bool = True) -> Dict[str, Any]:
     """
     try:
         # URL 정규화 (&list, &index 등 제거)
-        # URL 정규화 (&list, &index 등 제거) 확인
         normalized_url = normalize_youtube_url(url)
         
         # 비디오 ID가 없으면(검색 페이지 등) 일반 웹 스크래퍼 로직 사용
         if not normalized_url:
-             import requests
-             from bs4 import BeautifulSoup
-             from .web import extract_favicon, extract_meta_tags
-             
-             headers = {
-                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                 'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-             }
+             headers = get_browser_headers()
              
              # 리다이렉트를 명시적으로 허용
              response = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
@@ -189,17 +188,14 @@ def scrape_youtube(url: str, include_content: bool = True) -> Dict[str, Any]:
                      "success": True,
                      "title": metadata["title"] or "YouTube",
                      "description": metadata["description"],
-                     "thumnail_image_url": metadata["thumnail_image_url"],
-                     "favicon_image_url": metadata["icon"],
+                     "thumbnail_url": metadata["thumbnail_url"],
+                     "favicon_url": metadata["icon"],
                      "site_name": "YouTube",
                      "url": final_url,  # 리다이렉트 후 최종 URL
                  }
              else:
-                 return {
-                    "success": False,
-                    "error": f"Failed to fetch YouTube page: {response.status_code}",
-                    "url": url
-                 }
+                 logger.warning(f"Failed to fetch YouTube page: {response.status_code}. Using basic metadata.")
+                 return generate_basic_metadata(url)
 
         # video_id 추출
         video_id = extract_video_id(normalized_url)
@@ -209,6 +205,7 @@ def scrape_youtube(url: str, include_content: bool = True) -> Dict[str, Any]:
             'quiet': True,
             'skip_download': True,
             'no_warnings': True,
+            # 'cookiefile': 'cookies.txt', # 쿠키 파일이 있다면 사용
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -232,13 +229,10 @@ def scrape_youtube(url: str, include_content: bool = True) -> Dict[str, Any]:
         # 일반 웹 스크래퍼 로직으로 아이콘(파비콘) 추출
         icon_url = None
         try:
-            import requests
-            from bs4 import BeautifulSoup
-            from .web import extract_favicon
+            # requests import 이미 상단에 있음
+            # headers import 수정됨
             
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
+            headers = get_browser_headers()
             # 가볍게 요청 (타임아웃 짧게, 리다이렉트 허용)
             response = requests.get(normalized_url, headers=headers, timeout=5, allow_redirects=True)
             if response.status_code == 200:
@@ -254,8 +248,8 @@ def scrape_youtube(url: str, include_content: bool = True) -> Dict[str, Any]:
             "success": True,
             "title": title,
             "description": description,
-            "thumnail_image_url": thumbnail,
-            "favicon_image_url": icon_url,
+            "thumbnail_url": thumbnail,
+            "favicon_url": icon_url,
             "site_name": "YouTube",
             "url": normalized_url,
             # "video_id": video_id,
@@ -273,8 +267,5 @@ def scrape_youtube(url: str, include_content: bool = True) -> Dict[str, Any]:
         return result
 
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"YouTube scrape failed: {str(e)}",
-            "url": url
-        }
+        logger.error(f"YouTube scrape failed: {str(e)}. Using basic metadata.")
+        return generate_basic_metadata(url)

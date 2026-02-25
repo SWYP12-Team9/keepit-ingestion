@@ -9,9 +9,9 @@ env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }} # GCP 프로젝트 ID
   REGION: asia-northeast3 # 서울 리전
   GAR_LOCATION: asia-northeast3 # Artifact Registry 리전
-  REPOSITORY: keepit-repo # Artifact Registry에 생성할 저장소 이름
-  SERVICE: keepit-scraper-api # Cloud Run 서비스 이름
-  IMAGE: keepit-scraper
+  REPOSITORY: keepit-ingestion # Artifact Registry에 생성할 저장소 이름
+  SERVICE: keepit-ingestion-api # Cloud Run 서비스 이름
+  IMAGE: keepit-ingestion
 
 jobs:
   deploy:
@@ -35,9 +35,8 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Docker Auth
-        run: |-
-          gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev
+      - name: Docker Auth (Artifact Registry)
+        run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev --quiet
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

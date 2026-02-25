@@ -1,7 +1,5 @@
-version: '3.8'
-
 services:
-  scraper:
+  swyp-scraper:
     build: .
     container_name: keepit-scraper
     ports:
@@ -10,4 +8,6 @@ services:
       - .env
     volumes:
       - .:/app
+    shm_size: '2gb'
+    init: true
     restart: always

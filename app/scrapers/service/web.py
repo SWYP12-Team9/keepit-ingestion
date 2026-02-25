@@ -200,7 +200,7 @@ def scrape_web(url: str, include_content: bool = True, max_length: int = 1000) -
         final_url = response.url
 
         # HTML 파싱
-        soup = BeautifulSoup(response.content, 'lxml')
+        soup = BeautifulSoup(response.content, 'html.parser')
         metadata = extract_meta_tags(soup, final_url)
 
         # 결과 딕셔너리 생성 (최종 URL 반환)
@@ -219,6 +219,25 @@ def scrape_web(url: str, include_content: bool = True, max_length: int = 1000) -
             content = extract_content(response.text, max_length=max_length)
             if content:
                 result["content"] = content
+            else:
+                # 본문 추출 실패 시 iframe 확인 (특히 mainFrame)
+                # 네이버 블로그, 다음 블로그 등 레거시 프레임셋 구조 대응
+                # title은 가져왔지만 content가 없는 경우에만 실행됩니다.
+                iframe_tag = soup.select_one("iframe#mainFrame, frame#mainFrame, iframe[name='mainFrame'], frame[name='mainFrame']")
+                if iframe_tag and iframe_tag.get("src"):
+                    iframe_src = iframe_tag.get("src")
+                    iframe_url = urljoin(final_url, iframe_src)
+                    logger.info(f"Content extraction initial failed. Attempting to follow iframe: {iframe_url}")
+                    
+                    try:
+                        iframe_response = requests.get(iframe_url, headers=headers, timeout=10)
+                        if iframe_response.status_code == 200:
+                            iframe_content = extract_content(iframe_response.text, max_length=max_length)
+                            if iframe_content:
+                                result["content"] = iframe_content
+                                logger.info("Successfully extracted content from iframe.")
+                    except Exception as e:
+                        logger.warning(f"Failed to extract content from iframe: {str(e)}")
 
         return result
 

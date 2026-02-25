@@ -10,6 +10,8 @@ import socket
 import ipaddress
 import os
 
+import re
+
 
 def normalize_url(url: str) -> str:
     """
@@ -80,6 +82,9 @@ def is_naver_blog_url(url: str) -> bool:
     return "blog.naver.com" in url
 
 
+
+
+
 def is_velog_url(url: str) -> bool:
     """
     Velog URL인지 확인합니다.
@@ -132,6 +137,24 @@ def is_coupang_url(url: str) -> bool:
     return "coupang.com/" in url or url.endswith("coupang.com")
 
 
+def is_naver_map_url(url: str) -> bool:
+    """
+    네이버 지도 URL인지 확인합니다 (PC/Mobile/ShortURL).
+    """
+    return "map.naver.com" in url or "naver.me" in url
+
+def is_naver_search_url(url: str) -> bool:
+    """
+    네이버 검색 URL인지 확인합니다.
+    """
+    return "search.naver.com" in url
+
+def is_daum_search_url(url: str) -> bool:
+    """
+    Daum 검색 URL인지 확인합니다.
+    """
+    return "search.daum.net" in url
+
 def detect_site_type(url: str) -> str:
     """
     URL에서 사이트 타입을 감지합니다.
@@ -154,6 +177,12 @@ def detect_site_type(url: str) -> str:
         return "tistory"
     elif is_google_search_url(url):
         return "google_search"
+    elif is_naver_search_url(url):
+        return "naver_search"
+    elif is_daum_search_url(url):
+        return "daum_search"
+    elif is_naver_map_url(url):
+        return "naver_map"
     elif is_coupang_url(url):
         return "coupang"
     else:

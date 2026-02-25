@@ -13,11 +13,14 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
 from app.scrapers.utils.scrape_utils import generate_basic_metadata
 import requests
+import os
 from bs4 import BeautifulSoup
 from app.scrapers.service.web import extract_favicon, extract_meta_tags
 from app.scrapers.utils.headers import get_browser_headers
 
 logger = logging.getLogger(__name__)
+
+COOKIES_PATH = "/root/app/scraper/youtube_cookies.txt"
 
 def extract_video_id(url: str) -> Optional[str]:
     """
@@ -77,9 +80,39 @@ def get_transcript(video_id: str, languages: list = None) -> Optional[str]:
         languages = ['ko', 'en']
 
     try:
-        api = YouTubeTranscriptApi()
-        transcript = api.fetch(video_id, languages=languages)
-        return " ".join([t.text for t in transcript])
+        import requests
+        from http.cookiejar import MozillaCookieJar
+        
+        session = requests.Session()
+        # 쿠키가 존재할 경우 Session에 쿠키를 로드하여 인증 처리
+        if os.path.exists(COOKIES_PATH):
+            try:
+                cj = MozillaCookieJar(COOKIES_PATH)
+                cj.load(ignore_discard=True, ignore_expires=True)
+                session.cookies.update(cj)
+            except Exception as e:
+                logger.warning(f"Failed to load youtube cookies: {e}")
+
+        # 버전 1.2.4 에 맞게 API 객체 생성 및 자막 추출
+        api = YouTubeTranscriptApi(http_client=session)
+        transcript_list = api.list(video_id)
+        
+        try:
+            transcript = transcript_list.find_transcript(languages)
+            fetched_transcript = transcript.fetch()
+        except NoTranscriptFound:
+            # 설정한 언어가 없을 경우 자동 생성 자막이라도 가져올지 확인
+            # 기본적으로 find_transcript는 번역 자막을 반환하지 않으므로 직접 찾은 후 시도 가능
+            raise NoTranscriptFound(video_id, languages, transcript_list)
+
+        texts = []
+        for t in fetched_transcript:
+            if hasattr(t, 'text'):
+                texts.append(t.text)
+            elif isinstance(t, dict) and 'text' in t:
+                texts.append(t['text'])
+                
+        return " ".join(texts)
     except TranscriptsDisabled:
         return "이 영상은 자막 기능이 비활성화되어 있습니다."
     except NoTranscriptFound:

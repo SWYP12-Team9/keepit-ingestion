@@ -10,7 +10,7 @@ env:
   REGION: asia-northeast3 # 서울 리전
   GAR_LOCATION: asia-northeast3 # Artifact Registry 리전
   REPOSITORY: keepit-ingestion # Artifact Registry에 생성할 저장소 이름
-  SERVICE: keepit-scraper-api # Cloud Run 서비스 이름
+  SERVICE: keepit-ingestion-api # Cloud Run 서비스 이름
   IMAGE: keepit-ingestion
 
 jobs:

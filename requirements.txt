@@ -10,3 +10,4 @@ pytubefix
 youtube-transcript-api
 apify-client
 python-dotenv
+playwright

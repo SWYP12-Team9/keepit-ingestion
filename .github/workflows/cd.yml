@@ -62,7 +62,7 @@ jobs:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
           image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ github.sha }}
-          flags: '--allow-unauthenticated --memory=2Gi --cpu=2 --env-vars-file=.env'
+          flags: '--allow-unauthenticated --memory=4Gi --cpu=2 --env-vars-file=.env'
 
       - name: Show Output URL
         run: echo "배포 성공! 접속 URL ➡️ ${{ steps.deploy.outputs.url }}"

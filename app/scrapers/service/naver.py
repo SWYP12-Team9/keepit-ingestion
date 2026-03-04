@@ -20,39 +20,34 @@ def preprocess_naver_blog_url(url: str) -> str:
     네이버 블로그 URL을 스크래핑 가능한 형태로 변환합니다.
     (iframe 구조를 회피하기 위해 PostView URL로 변환)
     """
-    # https://blog.naver.com/ID/LOGNO 형태 감지
     pattern = r"blog\.naver\.com/([a-zA-Z0-9_-]+)/([0-9]+)"
     match = re.search(pattern, url)
     if match:
         blog_id = match.group(1)
         log_no = match.group(2)
-        # PostView URL로 변환 (iframe 내용 직접 접근)
         return f"https://blog.naver.com/PostView.naver?blogId={blog_id}&logNo={log_no}"
-    
+
     return url
 
-def scrape_naver_blog(url: str) -> Dict[str, Any]:
+async def scrape_naver_blog(url: str) -> Dict[str, Any]:
     """
     네이버 블로그 URL을 스크래핑합니다.
     iframe 구조를 처리하기 위해 URL 전처리를 수행 후 일반 웹 스크래퍼를 호츨합니다.
     """
     try:
-        # iframe URL로 변환 (PostView)
         target_url = preprocess_naver_blog_url(url)
-        
-        # 일반 웹 스크래퍼 호출 (변환된 URL 사용)
-        return scrape_web(target_url)
-        
+        return await scrape_web(target_url)
+
     except Exception as e:
         logger.error(f"Failed to scrape Naver Blog: {str(e)}. Using basic metadata.")
         return generate_basic_metadata(url)
 
-def scrape_naver_map(url: str) -> Dict[str, Any]:
+async def scrape_naver_map(url: str) -> Dict[str, Any]:
     """
     Naver 지도 URL에서 메타데이터를 추출합니다.
     """
     try:
-        result = scrape_web(url)
+        result = await scrape_web(url)
         if not result.get("title"):
             result["title"] = "네이버 지도"
             result["site_name"] = "Naver"
@@ -64,19 +59,18 @@ def scrape_naver_map(url: str) -> Dict[str, Any]:
 def scrape_naver_search(url: str) -> Dict[str, Any]:
     """
     Naver 검색 URL에서 검색어를 추출합니다.
-    
+
     URL 구조 예시:
     - https://search.naver.com/search.naver?query=검색어...
     """
     try:
         parsed = urlparse(url)
         query_params = parse_qs(parsed.query)
-        
+
         query = ""
         if 'query' in query_params:
             query = query_params['query'][0]
         elif 'where' in query_params and query_params['where'][0] == 'nexearch' and 'sm' in query_params:
-             # 복잡한 검색 URL일 경우 query 파림 다시 확인 (위에서 이미 확인됨)
              pass
 
         if query:
@@ -96,7 +90,7 @@ def scrape_naver_search(url: str) -> Dict[str, Any]:
             "url": url,
             "content": ""
         }
-            
+
     except Exception as e:
         logger.error(f"Failed to parse Naver Search URL: {str(e)}. Using basic metadata.")
         return generate_basic_metadata(url)

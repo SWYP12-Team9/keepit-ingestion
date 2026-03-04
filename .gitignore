@@ -41,4 +41,8 @@ ENV/
 Thumbs.db
 
 # Test
-test
+test/
+test_scripts/
+monitoring/
+uvicorn.log
+.pytest_cache/

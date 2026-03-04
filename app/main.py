@@ -1,17 +1,28 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
 
 from app.scrapers.controller.scrape_controller import router as scrape_router
+from app.scrapers.service.playwright_scraper import browser_pool
 
 # .env 파일 로드
 load_dotenv()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await browser_pool.initialize()
+    yield
+    await browser_pool.close()
+
+
 app = FastAPI(
     title="URL Metadata Scraper API",
     description="다양한 웹사이트의 URL에서 title, description, content, 대표 이미지 등을 추출하는 API",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS 설정

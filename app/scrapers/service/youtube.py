@@ -79,11 +79,14 @@ def get_transcript(video_id: str, languages: list = None) -> Optional[str]:
 
         return " ".join(texts)
     except TranscriptsDisabled:
-        return "이 영상은 자막 기능이 비활성화되어 있습니다."
+        logger.info("YouTube transcript disabled - video_id: %s", video_id)
+        return None
     except NoTranscriptFound:
-        return "해당 언어의 자막이 존재하지 않습니다."
+        logger.info("YouTube transcript not found - video_id: %s", video_id)
+        return None
     except Exception as e:
-        return f"자막 추출 실패: {str(e)}"
+        logger.warning("YouTube transcript extraction failed - video_id: %s, error: %s", video_id, e)
+        return None
 
 
 def get_best_thumbnail(info: Dict[str, Any]) -> Optional[str]:

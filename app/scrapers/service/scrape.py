@@ -17,6 +17,7 @@ from .coupang import scrape_coupang
 from .naver import scrape_naver_map, scrape_naver_search
 from .daum import scrape_daum_search
 from .playwright_scraper import scrape_with_playwright
+from .playwright_scraper import scrape_with_playwright
 from app.scrapers.utils.scrape_utils import (
     detect_site_type,
     validate_url_safety,
@@ -34,9 +35,11 @@ from app.scrapers.utils.scrape_utils import (
     is_coupang_url
 )
 import httpx
+import httpx
 from app.scrapers.utils.headers import get_browser_headers
 
 
+async def scrape_url(url: str, include_content: bool = True, max_length: int = 1000) -> Dict[str, Any]:
 async def scrape_url(url: str, include_content: bool = True, max_length: int = 1000) -> Dict[str, Any]:
     """
     URL에서 메타데이터를 추출하는 메인 함수.
@@ -76,6 +79,8 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
         }
 
     # SSRF 방지: 로컬/사설 IP 차단
+
+    # SSRF 방지: 로컬/사설 IP 차단
     if not validate_url_safety(url):
         return generate_basic_metadata(url)
 
@@ -83,12 +88,16 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
     url = normalize_url(url)
 
     # 축약 URL 리다이렉트 추적으로 최종 URL 확인
+    # 축약 URL 리다이렉트 추적으로 최종 URL 확인
     final_url = url
     try:
         headers = get_browser_headers()
         async with httpx.AsyncClient(follow_redirects=True) as client:
             response = await client.head(url, headers=headers, timeout=5)
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            response = await client.head(url, headers=headers, timeout=5)
         if response.status_code < 400:
+            final_url = str(response.url)
             final_url = str(response.url)
         else:
             final_url = url
@@ -96,25 +105,33 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
         final_url = url
 
     # 사이트별 스크래퍼 선택
+    used_generic_scraper = False
+
     if is_youtube_url(final_url):
+        result = await scrape_youtube(final_url, include_content=include_content)
         result = await scrape_youtube(final_url, include_content=include_content)
     elif is_instagram_url(final_url):
         result = await scrape_instagram(final_url, max_length=max_length)
+        result = await scrape_instagram(final_url, max_length=max_length)
     elif is_google_search_url(final_url):
         result = scrape_google_search(final_url)
+    elif is_naver_search_url(final_url):
     elif is_naver_search_url(final_url):
         result = scrape_naver_search(final_url)
     elif is_daum_search_url(final_url):
         result = scrape_daum_search(final_url)
     elif is_naver_map_url(final_url):
         result = await scrape_naver_map(final_url)
+        result = await scrape_naver_map(final_url)
     elif is_naver_blog_url(final_url):
         from .naver import scrape_naver_blog
+        result = await scrape_naver_blog(final_url)
         result = await scrape_naver_blog(final_url)
     elif is_coupang_url(final_url):
         result = scrape_coupang(final_url)
         return result
     else:
+        used_generic_scraper = True
         result = await scrape_web(final_url, include_content=True, max_length=max_length)
 
     title = result.get("title") or "" if result else ""
@@ -122,14 +139,18 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
     description = result.get("description") or "" if result else ""
 
     # Content가 없거나 100자 미만인 경우 → Playwright 시도
-    if not content.strip() or len(content.strip()) < 100:
+    if used_generic_scraper and (not content.strip() or len(content.strip()) < 100):
         logger.info("Content missing or too short. Attempting Playwright scraping...")
         try:
+            playwright_result = await scrape_with_playwright(final_url)
+
             playwright_result = await scrape_with_playwright(final_url)
 
             if playwright_result and playwright_result.get("content"):
                 logger.info("Playwright scraping successful.")
                 return playwright_result
+            elif playwright_result and playwright_result.get("title"):
+                result = playwright_result
             elif playwright_result and playwright_result.get("title"):
                 result = playwright_result
         except Exception as e:
@@ -139,17 +160,9 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
     content = result.get("content") or "" if result else ""
     description = result.get("description") or "" if result else ""
 
-    # Title조차 없거나 Content/Description 모두 없는 경우 → Apify 시도
+    # Title조차 없거나 Content/Description 모두 없는 경우 → 기본 메타데이터 반환
     if not result or not title.strip() or (not content.strip() and not description.strip()):
-        logger.info("Insufficient metadata. Attempting Apify scraping...")
-        # try: # todo: 잠깐 주석처리
-        #     from .apify_scraper import scrape_with_apify
-        #     apify_result = await scrape_with_apify(final_url)
-        #     if apify_result and apify_result.get("title"):
-        #         return apify_result
-        # except Exception as e:
-        #     logger.error(f"Apify scraping failed: {e}")
-
+        logger.info("Insufficient metadata. Returning basic metadata.")
         return generate_basic_metadata(final_url)
 
     return result

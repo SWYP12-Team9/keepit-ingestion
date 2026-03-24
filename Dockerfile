@@ -32,4 +32,4 @@ COPY . .
 EXPOSE 8000
 
 # 애플리케이션 실행 (Cloud Run의 PORT 환경변수 대응)
-CMD sh -c "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+CMD sh -c "gunicorn -w ${GUNICORN_WORKERS:-1} -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:${PORT:-8000}"

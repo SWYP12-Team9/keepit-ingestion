@@ -17,7 +17,6 @@ from .coupang import scrape_coupang
 from .naver import scrape_naver_map, scrape_naver_search
 from .daum import scrape_daum_search
 from .playwright_scraper import scrape_with_playwright
-from .playwright_scraper import scrape_with_playwright
 from app.scrapers.utils.scrape_utils import (
     detect_site_type,
     validate_url_safety,
@@ -77,8 +76,6 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
         }
 
     # SSRF 방지: 로컬/사설 IP 차단
-
-    # SSRF 방지: 로컬/사설 IP 차단
     if not validate_url_safety(url):
         return generate_basic_metadata(url)
 
@@ -86,16 +83,12 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
     url = normalize_url(url)
 
     # 축약 URL 리다이렉트 추적으로 최종 URL 확인
-    # 축약 URL 리다이렉트 추적으로 최종 URL 확인
     final_url = url
     try:
         headers = get_browser_headers()
         async with httpx.AsyncClient(follow_redirects=True) as client:
             response = await client.head(url, headers=headers, timeout=5)
-        async with httpx.AsyncClient(follow_redirects=True) as client:
-            response = await client.head(url, headers=headers, timeout=5)
         if response.status_code < 400:
-            final_url = str(response.url)
             final_url = str(response.url)
         else:
             final_url = url
@@ -106,7 +99,6 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
     used_generic_scraper = False
 
     if is_youtube_url(final_url):
-        result = await scrape_youtube(final_url, include_content=include_content)
         result = await scrape_youtube(final_url, include_content=include_content)
     elif is_instagram_url(final_url):
         result = await scrape_instagram(final_url, max_length=max_length)

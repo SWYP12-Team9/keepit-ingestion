@@ -4,14 +4,10 @@ import os
 import asyncio
 from contextlib import asynccontextmanager
 from typing import Dict, Any, Optional, List
-from contextlib import asynccontextmanager
-from typing import Dict, Any, Optional, List
 from bs4 import BeautifulSoup
 import trafilatura
 from playwright.async_api import async_playwright, Browser, Playwright
-from playwright.async_api import async_playwright, Browser, Playwright
 from app.scrapers.utils.scrape_utils import generate_basic_metadata
-from app.scrapers.service.web import extract_meta_tags
 from app.scrapers.service.web import extract_meta_tags
 
 logger = logging.getLogger(__name__)
@@ -131,7 +127,6 @@ browser_pool = BrowserPool(pool_size=_pool_size)
 
 async def scrape_with_playwright(url: str, max_length: int = 2000) -> Optional[Dict[str, Any]]:
     """
-    풀에서 브라우저 context를 빌려 JavaScript 기반 웹페이지를 스크래핑합니다.
     풀에서 브라우저 context를 빌려 JavaScript 기반 웹페이지를 스크래핑합니다.
 
     Args:

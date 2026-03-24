@@ -17,6 +17,7 @@ from .coupang import scrape_coupang
 from .naver import scrape_naver_map, scrape_naver_search
 from .daum import scrape_daum_search
 from .playwright_scraper import scrape_with_playwright
+from .playwright_scraper import scrape_with_playwright
 from app.scrapers.utils.scrape_utils import (
     detect_site_type,
     validate_url_safety,
@@ -34,9 +35,11 @@ from app.scrapers.utils.scrape_utils import (
     is_coupang_url
 )
 import httpx
+import httpx
 from app.scrapers.utils.headers import get_browser_headers
 
 
+async def scrape_url(url: str, include_content: bool = True, max_length: int = 1000) -> Dict[str, Any]:
 async def scrape_url(url: str, include_content: bool = True, max_length: int = 1000) -> Dict[str, Any]:
     """
     URL에서 메타데이터를 추출하는 메인 함수.
@@ -76,6 +79,8 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
         }
 
     # SSRF 방지: 로컬/사설 IP 차단
+
+    # SSRF 방지: 로컬/사설 IP 차단
     if not validate_url_safety(url):
         return generate_basic_metadata(url)
 
@@ -83,12 +88,16 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
     url = normalize_url(url)
 
     # 축약 URL 리다이렉트 추적으로 최종 URL 확인
+    # 축약 URL 리다이렉트 추적으로 최종 URL 확인
     final_url = url
     try:
         headers = get_browser_headers()
         async with httpx.AsyncClient(follow_redirects=True) as client:
             response = await client.head(url, headers=headers, timeout=5)
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            response = await client.head(url, headers=headers, timeout=5)
         if response.status_code < 400:
+            final_url = str(response.url)
             final_url = str(response.url)
         else:
             final_url = url
@@ -100,18 +109,23 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
 
     if is_youtube_url(final_url):
         result = await scrape_youtube(final_url, include_content=include_content)
+        result = await scrape_youtube(final_url, include_content=include_content)
     elif is_instagram_url(final_url):
+        result = await scrape_instagram(final_url, max_length=max_length)
         result = await scrape_instagram(final_url, max_length=max_length)
     elif is_google_search_url(final_url):
         result = scrape_google_search(final_url)
+    elif is_naver_search_url(final_url):
     elif is_naver_search_url(final_url):
         result = scrape_naver_search(final_url)
     elif is_daum_search_url(final_url):
         result = scrape_daum_search(final_url)
     elif is_naver_map_url(final_url):
         result = await scrape_naver_map(final_url)
+        result = await scrape_naver_map(final_url)
     elif is_naver_blog_url(final_url):
         from .naver import scrape_naver_blog
+        result = await scrape_naver_blog(final_url)
         result = await scrape_naver_blog(final_url)
     elif is_coupang_url(final_url):
         result = scrape_coupang(final_url)
@@ -130,9 +144,13 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
         try:
             playwright_result = await scrape_with_playwright(final_url)
 
+            playwright_result = await scrape_with_playwright(final_url)
+
             if playwright_result and playwright_result.get("content"):
                 logger.info("Playwright scraping successful.")
                 return playwright_result
+            elif playwright_result and playwright_result.get("title"):
+                result = playwright_result
             elif playwright_result and playwright_result.get("title"):
                 result = playwright_result
         except Exception as e:

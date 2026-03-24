@@ -96,6 +96,8 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
         final_url = url
 
     # 사이트별 스크래퍼 선택
+    used_generic_scraper = False
+
     if is_youtube_url(final_url):
         result = await scrape_youtube(final_url, include_content=include_content)
     elif is_instagram_url(final_url):
@@ -115,6 +117,7 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
         result = scrape_coupang(final_url)
         return result
     else:
+        used_generic_scraper = True
         result = await scrape_web(final_url, include_content=True, max_length=max_length)
 
     title = result.get("title") or "" if result else ""
@@ -122,7 +125,7 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
     description = result.get("description") or "" if result else ""
 
     # Content가 없거나 100자 미만인 경우 → Playwright 시도
-    if not content.strip() or len(content.strip()) < 100:
+    if used_generic_scraper and (not content.strip() or len(content.strip()) < 100):
         logger.info("Content missing or too short. Attempting Playwright scraping...")
         try:
             playwright_result = await scrape_with_playwright(final_url)
@@ -139,17 +142,9 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
     content = result.get("content") or "" if result else ""
     description = result.get("description") or "" if result else ""
 
-    # Title조차 없거나 Content/Description 모두 없는 경우 → Apify 시도
+    # Title조차 없거나 Content/Description 모두 없는 경우 → 기본 메타데이터 반환
     if not result or not title.strip() or (not content.strip() and not description.strip()):
-        logger.info("Insufficient metadata. Attempting Apify scraping...")
-        # try: # todo: 잠깐 주석처리
-        #     from .apify_scraper import scrape_with_apify
-        #     apify_result = await scrape_with_apify(final_url)
-        #     if apify_result and apify_result.get("title"):
-        #         return apify_result
-        # except Exception as e:
-        #     logger.error(f"Apify scraping failed: {e}")
-
+        logger.info("Insufficient metadata. Returning basic metadata.")
         return generate_basic_metadata(final_url)
 
     return result

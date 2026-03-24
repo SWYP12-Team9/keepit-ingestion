@@ -12,3 +12,4 @@ apify-client
 python-dotenv
 playwright
 httpx[http2]
+gunicorn

@@ -1,5 +1,6 @@
 
 import logging
+import os
 import asyncio
 from contextlib import asynccontextmanager
 from typing import Dict, Any, Optional, List
@@ -31,11 +32,16 @@ class BrowserPool:
         """앱 시작 시 브라우저를 pool_size만큼 미리 생성합니다."""
         self._playwright = await async_playwright().start()
         self._queue = asyncio.Queue()
-        for _ in range(self.pool_size):
-            browser = await self._launch_browser()
+        
+        # 브라우저 생성을 병렬 태스크로 생성
+        tasks = [self._launch_browser() for _ in range(self.pool_size)]
+        browsers = await asyncio.gather(*tasks)
+        
+        for browser in browsers:
             self._browsers.append(browser)
             await self._queue.put(BrowserInstance(browser=browser))
-        logger.info(f"BrowserPool initialized with {self.pool_size} browsers.")
+            
+        logger.info(f"BrowserPool initialized with {self.pool_size} browsers in parallel.")
 
     async def _launch_browser(self) -> Browser:
         assert self._playwright is not None, "BrowserPool not initialized. Call initialize() first."
@@ -114,7 +120,9 @@ class BrowserPool:
 
 
 # 앱 전체에서 공유하는 싱글톤 인스턴스
-browser_pool = BrowserPool(pool_size=2)
+# Cloud Run 2 vCPU / 4GiB 기준 기본값은 3으로 둡니다.
+_pool_size = int(os.environ.get("BROWSER_POOL_SIZE", "3"))
+browser_pool = BrowserPool(pool_size=_pool_size)
 
 
 async def scrape_with_playwright(url: str, max_length: int = 2000) -> Optional[Dict[str, Any]]:

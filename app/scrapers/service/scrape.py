@@ -35,11 +35,9 @@ from app.scrapers.utils.scrape_utils import (
     is_coupang_url
 )
 import httpx
-import httpx
 from app.scrapers.utils.headers import get_browser_headers
 
 
-async def scrape_url(url: str, include_content: bool = True, max_length: int = 1000) -> Dict[str, Any]:
 async def scrape_url(url: str, include_content: bool = True, max_length: int = 1000) -> Dict[str, Any]:
     """
     URL에서 메타데이터를 추출하는 메인 함수.
@@ -112,20 +110,16 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
         result = await scrape_youtube(final_url, include_content=include_content)
     elif is_instagram_url(final_url):
         result = await scrape_instagram(final_url, max_length=max_length)
-        result = await scrape_instagram(final_url, max_length=max_length)
     elif is_google_search_url(final_url):
         result = scrape_google_search(final_url)
-    elif is_naver_search_url(final_url):
     elif is_naver_search_url(final_url):
         result = scrape_naver_search(final_url)
     elif is_daum_search_url(final_url):
         result = scrape_daum_search(final_url)
     elif is_naver_map_url(final_url):
         result = await scrape_naver_map(final_url)
-        result = await scrape_naver_map(final_url)
     elif is_naver_blog_url(final_url):
         from .naver import scrape_naver_blog
-        result = await scrape_naver_blog(final_url)
         result = await scrape_naver_blog(final_url)
     elif is_coupang_url(final_url):
         result = scrape_coupang(final_url)
@@ -144,13 +138,9 @@ async def scrape_url(url: str, include_content: bool = True, max_length: int = 1
         try:
             playwright_result = await scrape_with_playwright(final_url)
 
-            playwright_result = await scrape_with_playwright(final_url)
-
             if playwright_result and playwright_result.get("content"):
                 logger.info("Playwright scraping successful.")
                 return playwright_result
-            elif playwright_result and playwright_result.get("title"):
-                result = playwright_result
             elif playwright_result and playwright_result.get("title"):
                 result = playwright_result
         except Exception as e:

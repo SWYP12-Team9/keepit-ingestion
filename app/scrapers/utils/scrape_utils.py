@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import socket
 import ipaddress
 import os
+from app.scrapers.dto.scrape_response import ScrapeResponse
 
 import re
 
@@ -192,7 +193,7 @@ def detect_site_type(url: str) -> str:
 
 
 
-def generate_basic_metadata(url: str) -> dict:
+def generate_basic_metadata(url: str) -> ScrapeResponse:
     """
     스크래핑 실패/차단 시 사용할 대체 메타데이터를 생성합니다.
     URL의 도메인에서 사이트 이름을 추출하여 제목으로 사용합니다.
@@ -201,7 +202,7 @@ def generate_basic_metadata(url: str) -> dict:
         url: 원본 URL
 
     Returns:
-        dict: 대체 메타데이터
+        ScrapeResponse: 대체 메타데이터
     """
     try:
         parsed = urlparse(url)
@@ -214,28 +215,28 @@ def generate_basic_metadata(url: str) -> dict:
         # .com, .co.kr 등 제거 로직 삭제 -> 도메인 그대로 사용
         site_name = domain
 
-        return {
-            "success": True,
-            "title": site_name, # 도메인 그대로 사용 (예: coupang.com)
-            "description": "",
-            "thumbnail_url": None,
-            "favicon_url": f"{parsed.scheme}://{parsed.netloc}/favicon.ico",
-            "site_name": site_name,
-            "url": url,
-            "content": ""
-        }
+        return ScrapeResponse(
+            success=True,
+            title=site_name,
+            description="",
+            thumbnail_url=None,
+            favicon_url=f"{parsed.scheme}://{parsed.netloc}/favicon.ico",
+            site_name=site_name,
+            url=url,
+            content="",
+        )
     except Exception:
         # URL 파싱 실패 등 최악의 경우
-        return {
-            "success": True, # 실패로 처리하지 않고 기본값 반환
-            "title": "Website",
-            "description": "",
-            "thumbnail_url": None,
-            "favicon_url": None,
-            "site_name": "Website",
-            "url": url,
-            "content": ""
-        }
+        return ScrapeResponse(
+            success=True,
+            title="Website",
+            description="",
+            thumbnail_url=None,
+            favicon_url=None,
+            site_name="Website",
+            url=url,
+            content="",
+        )
 
 def validate_url_safety(url: str) -> bool:
     """

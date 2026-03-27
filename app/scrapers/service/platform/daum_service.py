@@ -5,13 +5,13 @@ Daum 검색 URL에서 검색어를 추출하여 메타데이터를 생성합니�
 """
 
 import logging
-from typing import Dict, Any
 from urllib.parse import urlparse, parse_qs
+from app.scrapers.dto.scrape_response import ScrapeResponse
 from app.scrapers.utils.scrape_utils import generate_basic_metadata
 
 logger = logging.getLogger(__name__)
 
-def scrape_daum_search(url: str) -> Dict[str, Any]:
+def scrape_daum_search(url: str) -> ScrapeResponse:
     """
     Daum 검색 URL에서 검색어를 추출합니다.
     
@@ -33,16 +33,16 @@ def scrape_daum_search(url: str) -> Dict[str, Any]:
             title = "Daum 검색"
             description = "Daum 검색 결과입니다."
 
-        return {
-            "success": True,
-            "title": title,
-            "description": description,
-            "thumbnail_url": None,
-            "favicon_url": "https://search.daum.net/favicon.ico",
-            "site_name": "Daum",
-            "url": url,
-            "content": ""
-        }
+        return ScrapeResponse(
+            success=True,
+            title=title,
+            description=description,
+            thumbnail_url=None,
+            favicon_url="https://search.daum.net/favicon.ico",
+            site_name="Daum",
+            url=url,
+            content="",
+        )
             
     except Exception as e:
         logger.error(f"Failed to parse Daum Search URL: {str(e)}. Using basic metadata.")

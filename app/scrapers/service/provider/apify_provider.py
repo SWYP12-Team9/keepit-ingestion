@@ -7,15 +7,16 @@ Apify Fallback 스크래퍼 모듈
 import asyncio
 import os
 import logging
-from typing import Dict, Any, Optional
+from typing import Optional
 from bs4 import BeautifulSoup
 from apify_client import ApifyClient
+from app.scrapers.dto.scrape_response import ScrapeResponse
 from app.scrapers.utils.scrape_utils import generate_basic_metadata
-from .web import extract_meta_tags
+from app.scrapers.service.strategy.static_strategy import extract_meta_tags
 
 logger = logging.getLogger(__name__)
 
-async def scrape_with_apify(url: str) -> Optional[Dict[str, Any]]:
+async def scrape_with_apify(url: str) -> Optional[ScrapeResponse]:
     """
     Apify Actor를 사용하여 웹페이지를 스크래핑합니다.
     'apify/website-content-crawler' Actor를 사용합니다.
@@ -24,7 +25,7 @@ async def scrape_with_apify(url: str) -> Optional[Dict[str, Any]]:
         url: 스크래핑할 URL
 
     Returns:
-        성공 시 메타데이터 딕셔너리, 실패 시 None
+        성공 시 ScrapeResponse, 실패 시 None
     """
     api_token = os.environ.get("APIFY_API_KEY")
     if not api_token:
@@ -93,16 +94,15 @@ async def scrape_with_apify(url: str) -> Optional[Dict[str, Any]]:
             except Exception:
                 pass
 
-        return {
-            "success": True,
-            "title": title,
-            "description": description,
-            "thumbnail_url": thumbnail_url,
-            "favicon_url": favicon_url,
-            "site_name": site_name,
-            "url": item.get("url", url),
-            "content": None
-        }
+        return ScrapeResponse(
+            success=True,
+            title=title,
+            description=description,
+            thumbnail_url=thumbnail_url,
+            favicon_url=favicon_url,
+            site_name=site_name,
+            url=item.get("url", url),
+        )
 
     except Exception as e:
         logger.error(f"Apify fallback failed: {str(e)}")

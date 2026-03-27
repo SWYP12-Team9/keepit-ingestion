@@ -1,25 +1,9 @@
 import asyncio
-from fastapi import APIRouter, Query, HTTPException
-from typing import Optional
-from app.scrapers.service.scrape import scrape_url
+from fastapi import APIRouter, HTTPException
+from app.scrapers.service.scrape_orchestrator import scrape_url
 from app.scrapers.controller.scrape_api import URLRequest, URLListRequest
 
 router = APIRouter()
-
-@router.get("/scrape")
-async def scrape_url_get(
-    url: str = Query(..., description="스크래핑할 URL을 입력하세요"),
-    max_length: Optional[int] = Query(1000, description="본문 미리보기 최대 길이 (기본값: 1000)")
-):
-    """
-    GET 메서드로 URL 메타데이터 추출
-    """
-    result = await scrape_url(url, max_length=max_length)
-
-    if not result.get("success"):
-        raise HTTPException(status_code=400, detail=result.get("error", "Failed to scrape URL"))
-
-    return result
 
 @router.post("/scrape")
 async def scrape_url_post(request: URLRequest):
@@ -28,10 +12,10 @@ async def scrape_url_post(request: URLRequest):
     """
     result = await scrape_url(request.url, max_length=request.max_length)
 
-    if not result.get("success"):
-        raise HTTPException(status_code=400, detail=result.get("error", "Failed to scrape URL"))
+    if not result.success:
+        raise HTTPException(status_code=400, detail=result.error or "Failed to scrape URL")
 
-    return result
+    return result.to_dict()
 
 @router.post("/scrape/batch")
 async def scrape_urls_batch(request: URLListRequest):
@@ -42,12 +26,12 @@ async def scrape_urls_batch(request: URLListRequest):
         scrape_url(url, max_length=request.max_length) for url in request.urls
     ])
 
-    success_count = sum(1 for r in results if r.get("success"))
+    success_count = sum(1 for r in results if r.success)
     failed_count = len(results) - success_count
 
     return {
         "total": len(request.urls),
         "success_count": success_count,
         "failed_count": failed_count,
-        "results": list(results)
+        "results": [result.to_dict() for result in results]
     }

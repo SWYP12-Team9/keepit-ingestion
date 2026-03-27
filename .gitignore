@@ -41,7 +41,6 @@ ENV/
 Thumbs.db
 
 # Test
-test/
 test_scripts/
 monitoring/
 uvicorn.log

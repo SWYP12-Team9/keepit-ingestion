@@ -1,7 +1,6 @@
 fastapi
 uvicorn
 trafilatura
-yt_dlp
 beautifulsoup4
 requests
 lxml
@@ -13,3 +12,4 @@ python-dotenv
 playwright
 httpx[http2]
 gunicorn
+google-api-python-client

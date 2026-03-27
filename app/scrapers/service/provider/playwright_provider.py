@@ -5,10 +5,14 @@ import asyncio
 from contextlib import asynccontextmanager
 from typing import Dict, Any, Optional, List
 from bs4 import BeautifulSoup
-import trafilatura
 from playwright.async_api import async_playwright, Browser, Playwright
+from app.scrapers.dto.scrape_response import ScrapeResponse
+from app.scrapers.utils.headers import get_playwright_context_options
 from app.scrapers.utils.scrape_utils import generate_basic_metadata
-from app.scrapers.service.web import extract_meta_tags
+from app.scrapers.service.strategy.static_strategy import (
+    extract_content,
+    extract_meta_tags,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +25,7 @@ class BrowserInstance:
     usage_count: int = 0
 
 class BrowserPool:
-    def __init__(self, pool_size: int = 2, max_usages: int = 100):
+    def __init__(self, pool_size: int = 4, max_usages: int = 100):
         self.pool_size = pool_size
         self.max_usages = max_usages
         self._playwright: Optional[Playwright] = None
@@ -75,11 +79,8 @@ class BrowserPool:
                 browser_item.browser = browser
                 browser_item.usage_count = 0
 
-            context = await browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                viewport={"width": 1280, "height": 800},
-                ignore_https_errors=True,
-            )
+            context_options = get_playwright_context_options()
+            context = await browser.new_context(**context_options)
             yield context
         finally:
             if context:
@@ -120,12 +121,11 @@ class BrowserPool:
 
 
 # 앱 전체에서 공유하는 싱글톤 인스턴스
-# Cloud Run 2 vCPU / 4GiB 기준 기본값은 3으로 둡니다.
-_pool_size = int(os.environ.get("BROWSER_POOL_SIZE", "3"))
+_pool_size = int(os.environ.get("BROWSER_POOL_SIZE", "4"))
 browser_pool = BrowserPool(pool_size=_pool_size)
 
 
-async def scrape_with_playwright(url: str, max_length: int = 2000) -> Optional[Dict[str, Any]]:
+async def scrape_with_playwright(url: str, max_length: int = 2000) -> Optional[ScrapeResponse]:
     """
     풀에서 브라우저 context를 빌려 JavaScript 기반 웹페이지를 스크래핑합니다.
 
@@ -176,20 +176,23 @@ async def scrape_with_playwright(url: str, max_length: int = 2000) -> Optional[D
             soup = BeautifulSoup(content_html, "html.parser")
             metadata = await extract_meta_tags(soup, url)
 
-            result = {
-                "success": True,
-                "title": metadata.get("title"),
-                "description": metadata.get("description"),
-                "thumbnail_url": metadata.get("thumbnail_url"),
-                "favicon_url": metadata.get("icon"),
-                "site_name": metadata.get("site_name"),
-                "url": url,
-            }
-
-
-            content = trafilatura.extract(content_html, include_comments=False)
+            result = ScrapeResponse(
+                success=True,
+                title=metadata.get("title"),
+                description=metadata.get("description"),
+                thumbnail_url=metadata.get("thumbnail_url"),
+                favicon_url=metadata.get("icon"),
+                site_name=metadata.get("site_name"),
+                url=url,
+            )
+            content = extract_content(
+                content_html,
+                max_length=max_length,
+                title=metadata.get("title"),
+                description=metadata.get("description"),
+            )
             if content:
-                result["content"] = content[:max_length] if len(content) > max_length else content
+                result.content = content
 
 
             return result

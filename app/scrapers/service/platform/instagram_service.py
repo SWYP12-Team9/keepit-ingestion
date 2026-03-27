@@ -3,11 +3,12 @@ import os
 import logging
 from typing import Dict, Any
 from apify_client import ApifyClient
+from app.scrapers.dto.scrape_response import ScrapeResponse
 from app.scrapers.utils.scrape_utils import generate_basic_metadata
 
 logger = logging.getLogger(__name__)
 
-async def scrape_instagram(url: str, max_length: int = 200) -> Dict[str, Any]:
+async def scrape_instagram(url: str, max_length: int = 200) -> ScrapeResponse:
     """
     Instagram URL에서 메타데이터를 추출 (Apify 사용).
 
@@ -18,16 +19,7 @@ async def scrape_instagram(url: str, max_length: int = 200) -> Dict[str, Any]:
         url: Instagram URL (포스트, 릴스 등)
 
     Returns:
-        dict: {
-            "success": bool,
-            "title": str,
-            "description": str,
-            "thumbnail_url": str,
-            "favicon_url": str,
-            "site_name": str,
-            "url": str,
-            "content": str (본문 + 댓글),
-        }
+        ScrapeResponse
     """
     api_token = os.environ.get("APIFY_API_KEY")
     if not api_token:
@@ -81,16 +73,16 @@ async def scrape_instagram(url: str, max_length: int = 200) -> Dict[str, Any]:
         title = caption.split('\n')[0][:100] if caption else "Instagram Post"
         description = caption[:max_length] + "..." if caption and len(caption) > max_length else caption
 
-        return {
-            "success": True,
-            "title": title,
-            "description": description,
-            "thumbnail_url": image_url,
-            "favicon_url": icon_url,
-            "site_name": "Instagram",
-            "url": post.get("url", url),
-            "content": full_content
-        }
+        return ScrapeResponse(
+            success=True,
+            title=title,
+            description=description,
+            thumbnail_url=image_url,
+            favicon_url=icon_url,
+            site_name="Instagram",
+            url=post.get("url", url),
+            content=full_content,
+        )
 
     except Exception as e:
         logger.error(f"Apify detailed scraping failed: {str(e)}. Using basic metadata.")

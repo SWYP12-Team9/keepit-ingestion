@@ -6,11 +6,11 @@ Naver 지도 및 검색 URL에서 쿼리나 장소명을 추출하여 메타데�
 """
 
 import logging
-from typing import Dict, Any
 from urllib.parse import urlparse, parse_qs
-from .web import scrape_web
+from app.scrapers.service.platform.web_service import scrape_web
 
 import re
+from app.scrapers.dto.scrape_response import ScrapeResponse
 from app.scrapers.utils.scrape_utils import generate_basic_metadata
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ def preprocess_naver_blog_url(url: str) -> str:
 
     return url
 
-async def scrape_naver_blog(url: str) -> Dict[str, Any]:
+async def scrape_naver_blog(url: str) -> ScrapeResponse:
     """
     네이버 블로그 URL을 스크래핑합니다.
     iframe 구조를 처리하기 위해 URL 전처리를 수행 후 일반 웹 스크래퍼를 호츨합니다.
@@ -42,21 +42,21 @@ async def scrape_naver_blog(url: str) -> Dict[str, Any]:
         logger.error(f"Failed to scrape Naver Blog: {str(e)}. Using basic metadata.")
         return generate_basic_metadata(url)
 
-async def scrape_naver_map(url: str) -> Dict[str, Any]:
+async def scrape_naver_map(url: str) -> ScrapeResponse:
     """
     Naver 지도 URL에서 메타데이터를 추출합니다.
     """
     try:
         result = await scrape_web(url)
-        if not result.get("title"):
-            result["title"] = "네이버 지도"
-            result["site_name"] = "Naver"
+        if not result.title:
+            result.title = "네이버 지도"
+            result.site_name = "Naver"
         return result
     except Exception as e:
         logger.error(f"Failed to scrape Naver Map: {str(e)}. Using basic metadata.")
         return generate_basic_metadata(url)
 
-def scrape_naver_search(url: str) -> Dict[str, Any]:
+def scrape_naver_search(url: str) -> ScrapeResponse:
     """
     Naver 검색 URL에서 검색어를 추출합니다.
 
@@ -80,16 +80,16 @@ def scrape_naver_search(url: str) -> Dict[str, Any]:
             title = "네이버 검색"
             description = "네이버 검색 결과입니다."
 
-        return {
-            "success": True,
-            "title": title,
-            "description": description,
-            "thumbnail_url": None,
-            "favicon_url": "https://ssl.pstatic.net/sstatic/search/favicon/favicon_191118_pc.ico",
-            "site_name": "Naver",
-            "url": url,
-            "content": ""
-        }
+        return ScrapeResponse(
+            success=True,
+            title=title,
+            description=description,
+            thumbnail_url=None,
+            favicon_url="https://ssl.pstatic.net/sstatic/search/favicon/favicon_191118_pc.ico",
+            site_name="Naver",
+            url=url,
+            content="",
+        )
 
     except Exception as e:
         logger.error(f"Failed to parse Naver Search URL: {str(e)}. Using basic metadata.")

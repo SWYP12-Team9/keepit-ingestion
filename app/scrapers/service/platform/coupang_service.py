@@ -1,11 +1,12 @@
 import logging
 from typing import Dict, Any
 
+from app.scrapers.dto.scrape_response import ScrapeResponse
 from app.scrapers.utils.scrape_utils import generate_basic_metadata
 
 logger = logging.getLogger(__name__)
 
-def scrape_coupang(url: str) -> Dict[str, Any]:
+def scrape_coupang(url: str) -> ScrapeResponse:
     """
     쿠팡 상품 페이지 메타데이터 수집
 

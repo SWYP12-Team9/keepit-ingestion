@@ -1,16 +1,34 @@
 """
-스크래퍼 모듈
+스크래퍼 서비스 패키지
 
-다양한 웹사이트에서 메타데이터를 추출하는 함수들을 제공합니다.
+기능별 서브패키지로 구성됩니다:
+- strategy/: 정적/동적 스크래핑 전략
+- provider/: Playwright, Apify 같은 외부 구현체
+- platform/: 기본 웹 처리와 특정 사이트 전용 스크래핑 서비스
 """
 
-from .youtube import scrape_youtube, extract_video_id, get_transcript, get_channel_icon, normalize_youtube_url
-from .instagram import scrape_instagram
-from .google import scrape_google_search
-from .coupang import scrape_coupang
-from .naver import scrape_naver_map, scrape_naver_search
-from .daum import scrape_daum_search
-from .web import scrape_web, extract_meta_tags, extract_content, extract_favicon
+from .scrape_orchestrator import scrape_url
+from .platform.youtube_service import (
+    scrape_youtube,
+    extract_video_id,
+    get_transcript,
+    get_channel_icon,
+    normalize_youtube_url,
+)
+from .platform.instagram_service import scrape_instagram
+from .platform.google_service import scrape_google_search
+from .platform.coupang_service import scrape_coupang
+from .platform.naver_service import scrape_naver_map, scrape_naver_search
+from .platform.daum_service import scrape_daum_search
+from .strategy.static_strategy import (
+    scrape_static,
+    extract_meta_tags,
+    extract_content,
+    extract_favicon,
+)
+from .strategy.dynamic_strategy import scrape_dynamic
+from .platform.web_service import scrape_web
+
 from app.scrapers.utils.scrape_utils import (
     normalize_url,
     is_youtube_url,
@@ -26,6 +44,13 @@ from app.scrapers.utils.scrape_utils import (
 )
 
 __all__ = [
+    # External orchestrator
+    "scrape_url",
+
+    # Static & Dynamic Strategies
+    "scrape_static",
+    "scrape_dynamic",
+
     # YouTube functions
     "scrape_youtube",
     "extract_video_id",

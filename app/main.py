@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 
 from app.scrapers.controller.scrape_controller import router as scrape_router
-from app.scrapers.service.playwright_scraper import browser_pool
+from app.scrapers.service.provider import browser_pool
 
 # .env 파일 로드
 load_dotenv()

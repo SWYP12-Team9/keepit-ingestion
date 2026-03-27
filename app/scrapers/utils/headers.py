@@ -56,3 +56,25 @@ def get_headers_with_referer(referer_url: str) -> Dict[str, str]:
     headers = get_browser_headers()
     headers["Referer"] = referer_url
     return headers
+
+
+def get_playwright_context_options() -> Dict[str, object]:
+    """
+    Playwright context용 브라우저 옵션을 생성합니다.
+
+    브라우저가 자동으로 채우는 fetch 관련 헤더는 건드리지 않고,
+    User-Agent, 언어, viewport, 추가 헤더만 안전하게 주입합니다.
+    """
+    headers = get_browser_headers()
+
+    return {
+        "user_agent": headers["User-Agent"],
+        "locale": "ko-KR",
+        "viewport": {"width": 1280, "height": 800},
+        "ignore_https_errors": True,
+        "extra_http_headers": {
+            "Accept-Language": headers["Accept-Language"],
+            "Upgrade-Insecure-Requests": headers["Upgrade-Insecure-Requests"],
+            "Cache-Control": headers["Cache-Control"],
+        },
+    }

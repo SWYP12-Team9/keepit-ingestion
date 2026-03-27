@@ -14,8 +14,6 @@ from app.scrapers.service.strategy.static_strategy import (
 
 
 WORDPRESS_ARTICLE_URL = "https://example.com/tencent-job-post"
-NEXTJS_ARTICLE_URL = "https://example.com/blog/nextjs-hydration-article"
-JSON_LD_ARTICLE_URL = "https://example.com/articles/structured-data-post"
 
 LONG_BODY_TEXT = (
     "Business Unit Cloud & Smart Industries Group (CSIG) is responsible for promoting "

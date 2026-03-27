@@ -1,10 +1,8 @@
-"""기존 통합 테스트 - ScrapeResponse 반환 타입에 맞게 업데이트"""
+"""
+스크래프 오케스트레이터 테스트
+"""
 
-import os
-import sys
 import pytest
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.scrapers.dto.scrape_response import ScrapeResponse
 from app.scrapers.service import scrape_orchestrator
@@ -20,9 +18,66 @@ class _FailingAsyncClient:
     async def head(self, *args, **kwargs):
         raise RuntimeError("network disabled for test")
 
+
 @pytest.mark.asyncio
-async def test_scrape_quote_toscrape(monkeypatch):
-    """일반 웹 URL이 web 스크래퍼로 위임되는지 검증"""
+async def test_scrape_url_empty_url_returns_error():
+    result = await scrape_orchestrator.scrape_url("")
+    assert isinstance(result, ScrapeResponse)
+    assert result.success is False
+
+
+@pytest.mark.asyncio
+async def test_scrape_url_delegates_google_search(monkeypatch):
+    monkeypatch.setattr(scrape_orchestrator, "validate_url_safety", lambda url: True)
+    monkeypatch.setattr(scrape_orchestrator, "normalize_url", lambda url: url)
+    monkeypatch.setattr(scrape_orchestrator.httpx, "AsyncClient", _FailingAsyncClient)
+    monkeypatch.setattr(
+        scrape_orchestrator,
+        "scrape_google_search",
+        lambda url: ScrapeResponse(
+            success=True,
+            title="test | Google 검색",
+            description="'test'의 Google 검색 결과입니다.",
+            site_name="Google",
+            url=url,
+            content="",
+        ),
+    )
+
+    result = await scrape_orchestrator.scrape_url("https://www.google.com/search?q=test")
+    assert isinstance(result, ScrapeResponse)
+    assert result.success is True
+    assert result.site_name == "Google"
+
+
+@pytest.mark.asyncio
+async def test_scrape_url_delegates_naver_search(monkeypatch):
+    monkeypatch.setattr(scrape_orchestrator, "validate_url_safety", lambda url: True)
+    monkeypatch.setattr(scrape_orchestrator, "normalize_url", lambda url: url)
+    monkeypatch.setattr(scrape_orchestrator.httpx, "AsyncClient", _FailingAsyncClient)
+    monkeypatch.setattr(
+        scrape_orchestrator,
+        "scrape_naver_search",
+        lambda url: ScrapeResponse(
+            success=True,
+            title="테스트 | 네이버 검색",
+            description="네이버 검색 결과입니다.",
+            site_name="Naver",
+            url=url,
+            content="",
+        ),
+    )
+
+    result = await scrape_orchestrator.scrape_url(
+        "https://search.naver.com/search.naver?query=테스트"
+    )
+    assert isinstance(result, ScrapeResponse)
+    assert result.success is True
+    assert result.site_name == "Naver"
+
+
+@pytest.mark.asyncio
+async def test_scrape_url_delegates_generic_web(monkeypatch):
     url = "http://quotes.toscrape.com/"
     monkeypatch.setattr(scrape_orchestrator, "validate_url_safety", lambda url: True)
     monkeypatch.setattr(scrape_orchestrator, "normalize_url", lambda url: url)
@@ -45,9 +100,9 @@ async def test_scrape_quote_toscrape(monkeypatch):
     assert result.success is True
     assert "Quotes to Scrape" in (result.title or "")
 
+
 @pytest.mark.asyncio
-async def test_scrape_wikipedia(monkeypatch):
-    """일반 웹 URL 본문 결과가 유지되는지 검증"""
+async def test_scrape_url_preserves_web_content(monkeypatch):
     url = "https://en.wikipedia.org/wiki/Load_testing"
     monkeypatch.setattr(scrape_orchestrator, "validate_url_safety", lambda url: True)
     monkeypatch.setattr(scrape_orchestrator, "normalize_url", lambda url: url)
@@ -69,4 +124,4 @@ async def test_scrape_wikipedia(monkeypatch):
     assert isinstance(result, ScrapeResponse)
     assert result.success is True
     assert "Load testing" in (result.title or "")
-    assert len(result.content or "") > 50, "Content should have some text"
+    assert len(result.content or "") > 50
